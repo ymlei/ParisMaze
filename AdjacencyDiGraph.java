@@ -17,6 +17,9 @@ public class AdjacencyDiGraph<Vertex, Edge> implements DiGraph<Vertex, Edge> {
 	private Map<Edge, Vertex> edgeToDest= new HashMap<Edge, Vertex>();
 	private Map<Vertex, String> vertexToName= new HashMap<Vertex, String>();
 	
+	List<List<Vertex>> global_AllSP = null;
+	List<Vertex> global_diameter = null;
+	
 	public AdjacencyDiGraph(){
 	}
 	
@@ -183,6 +186,9 @@ public class AdjacencyDiGraph<Vertex, Edge> implements DiGraph<Vertex, Edge> {
 		List<List<Vertex>> res = new ArrayList<List<Vertex>>();
 		
 		for(Vertex v : allVerteices) {
+			
+			if(v.equals(src)) continue;
+			
 			List<Vertex> onePath = new LinkedList<Vertex>();
 			
 			while(!v.equals(src)) {
@@ -198,16 +204,22 @@ public class AdjacencyDiGraph<Vertex, Edge> implements DiGraph<Vertex, Edge> {
 	}
 	
 	public List<List<Vertex>> collectAllSP() {
+		
+		if(global_AllSP != null) return global_AllSP;
+		
 		List<List<Vertex>> AllSP = new ArrayList<List<Vertex>>();
 		for(Vertex src : getVertices()) {
 			List<List<Vertex>> path = shortestPathFrom(src);
 			AllSP.addAll(path);
 		}
 		
-		return AllSP;
+		return global_AllSP = AllSP;
 	}
 	
 	public List<Vertex> diameterUnweighted() {
+		
+		if(global_diameter != null) return global_diameter;
+		
 		List<Vertex> diameter = new LinkedList<Vertex>();
 		int length = 0;
 		
@@ -218,7 +230,28 @@ public class AdjacencyDiGraph<Vertex, Edge> implements DiGraph<Vertex, Edge> {
 			}
 		}
 		
-		return diameter;
+		return global_diameter = diameter;
 		
+	}
+	
+	public String diameterToString () {
+		
+		StringBuilder longestPathStr = new StringBuilder();
+		StringBuilder lengthSubPath = new StringBuilder();
+		longestPathStr.append("Longest path: ");
+		lengthSubPath.append("Lengths of sub-paths: ");
+
+		int length = 0;
+		for(String v : VerticesToStrings(diameterUnweighted())) {
+			longestPathStr.append(v+"=>");
+			lengthSubPath.append(v+":1 step;"+v+"-");
+			length++;
+		}
+		
+		StringBuilder res = new StringBuilder();
+		res.append(longestPathStr + "\n");
+		res.append(lengthSubPath + "\n");
+		res.append("Total lengthof the path: "+length+"m.\n");
+		return res.toString();
 	}
 }

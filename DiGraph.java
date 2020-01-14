@@ -22,4 +22,5 @@ public interface DiGraph<Vertex, Edge> {
 	public List<List<Vertex>> shortestPathFrom(Vertex src);
 	public List<List<Vertex>> collectAllSP();
 	public List<Vertex> diameterUnweighted();
+	public String diameterToString();
 }

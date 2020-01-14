@@ -3,33 +3,38 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.PriorityQueue;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 
-public class AdjacencyWeightedDiGraph<Vertex, Edge, WeightType> 
-	implements WeightedDiGraph<Vertex, Edge, WeightType> {
+public class AdjacencyWeightedDiGraph<Vertex, Edge> 
+	implements WeightedDiGraph<Vertex, Edge> {
 	
 	protected Set<Vertex> vertices= new HashSet<Vertex>();
 	protected Set<Edge> edges= new HashSet<Edge>();
-	protected Map<Edge, WeightType> edgeToWeight = new HashMap<Edge, WeightType>();
+	protected Map<Edge, Float> edgeToWeight = new HashMap<Edge, Float>();
 	protected Map<Vertex, List<Edge> > vertexToEdges= new HashMap<Vertex, List<Edge> >();
 	private Map<Edge, Vertex> edgeToSrc= new HashMap<Edge, Vertex>();
 	private Map<Edge, Vertex> edgeToDest= new HashMap<Edge, Vertex>();
 //	private Map<String, Vertex> nameToVertex= new HashMap<String, Vertex>();
 	private Map<Vertex, String> vertexToName= new HashMap<Vertex, String>();
 	
+	List<List<Edge>> global_AllSP = null;
+	List<Edge> global_diameter = null;
+	Map<Edge,Float> global_betweenness = new HashMap<Edge, Float>();
 	
 	private class Node implements Comparable<Node>{
 		public final Vertex v;
 		public Vertex pathFrom;
 		public Edge e;
-		public WeightType dis;
+		public float dis;
 		
-		public Node(Vertex vertex, Vertex from, Edge edge, WeightType distance) {
+		public Node(Vertex vertex, Vertex from, Edge edge, float distance) {
 			v = vertex;
 			e = edge;
 			pathFrom = from;
@@ -57,7 +62,7 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge, WeightType>
 		return new ArrayList<Vertex>(vertices);
 	}
 	
-	public void addEdge(Edge e, WeightType weight, Vertex src, Vertex dest){
+	public void addEdge(Edge e, float weight, Vertex src, Vertex dest){
 		//System.out.println("Add edge " + e + "\n");
 		addVertex(src);
 		addVertex(dest);
@@ -66,6 +71,15 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge, WeightType>
 		edgeToSrc.put(e, src);
 		edgeToDest.put(e, dest);
 		vertexToEdges.get(src).add(e);
+	}
+	
+	public void removeEdge(Edge e, Vertex src, Vertex dest){
+		//System.out.println("Remove edge " + e + "\n");
+		edges.remove(e);
+		edgeToWeight.remove(e);
+		edgeToSrc.remove(e);
+		edgeToDest.remove(e);
+		vertexToEdges.get(src).remove(e);
 	}
 	
 	public List<Edge> getEdges(){
@@ -170,14 +184,14 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge, WeightType>
 		return res;
 	}
 	*/
-	public List<List<Vertex>> shortestPathFrom(Vertex src){
+	public List<List<Edge>> shortestPathFrom(Vertex src){
 		// Dijkstra with priority queue
-		Map<Vertex, WeightType> distance = new HashMap<Vertex, WeightType>();
+		Map<Vertex, Float> distance = new HashMap<Vertex, Float>();
 		Map<Vertex, Edge> adjacent = new HashMap<Vertex, Edge>();
 		Map<Vertex, Boolean> visit = new HashMap<Vertex, Boolean>();
 		
 		Queue<Node> pq = new PriorityQueue<Node>();
-		Node cur = new Node(src, src, null, edgeToWeight.get(0));
+		Node cur = new Node(src, src, null, 0);
 		//the Last para should be 0. But the WeightType doesn't allow 0;
 		pq.add(cur);
 		
@@ -197,20 +211,195 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge, WeightType>
 				//Has been visited, next edge
 				if(visit.get(edgeToDest.get(e)) == true) continue;
 				
-				pq.add(new Node(edgeToDest.get(e), cur.v, e, cur.dis+edgeToWeight.get(e)));
+				pq.add(new Node(edgeToDest.get(e), cur.v, e, cur.dis + edgeToWeight.get(e)));
 			}
 		}
 			
 		
-		List<Vertex> res = new ArrayList<Vertex>();
-		Vertex v = cur.v;
-		while(!v.equals(src)) {
-			//System.out.println("track "+ cur_vertex +"\n");
-			res.add(0, v);
-			v = visit.get(v);
+		List<List<Edge>> res = new ArrayList<List<Edge>>();
+		
+		for(Vertex v :  getVertices()) {
+			
+			if(v.equals(src)) continue;
+			
+			LinkedList<Edge> path = new LinkedList<Edge>();
+			while(!v.equals(src)) {
+				//System.out.println("track "+ cur_vertex +"\n");
+				path.add(0, adjacent.get(v));
+				v = edgeToSrc.get(adjacent.get(v));
+			}
+			res.add(path);
 		}
-		res.add(0, v);
+
 		return res;
 	}
 	
+	
+	public List<List<Edge>> collectAllSP() {
+		
+		if(global_AllSP != null) return global_AllSP;
+		
+		List<List<Edge>> AllSP = new ArrayList<List<Edge>>();
+		for(Vertex src : getVertices()) {
+			List<List<Edge>> path = shortestPathFrom(src);
+			AllSP.addAll(path);
+		}
+		return global_AllSP = AllSP;
+	}
+	
+	
+	public List<Edge> diameterWeighted(){
+		
+		if(global_diameter != null) return global_diameter;
+		
+		List<Edge> diameter = new LinkedList<Edge>();
+		float length = 0;
+		
+		for(List<Edge> path : collectAllSP()) {
+			
+			float curlength = 0;
+			
+			for(Edge e : path) {
+				curlength += edgeToWeight.get(e);
+			}
+			
+			if(curlength > length) {
+				length = curlength;
+				diameter = path;
+			}
+		}
+		
+		return global_diameter = diameter;
+	}
+	
+	
+	public String diameterToString() {
+		StringBuilder longestPathStr = new StringBuilder();
+		StringBuilder lengthSubPath = new StringBuilder();
+		longestPathStr.append("Longest path: ");
+		lengthSubPath.append("Lengths of sub-paths: ");
+
+		List<Edge> diameter = diameterWeighted();
+		longestPathStr.append(vertexToName.get( edgeToSrc.get(diameter.get(0))));
+		int length = 0;
+		for(Edge e : diameter) {
+			longestPathStr.append("=>" + vertexToName.get(edgeToDest.get(e)));
+			lengthSubPath.append(vertexToName.get(edgeToSrc.get(e)) + "-" + vertexToName.get(edgeToDest.get(e)) 
+				+":"+edgeToWeight.get(e)+"m;");
+			length += edgeToWeight.get(e);
+		}
+		
+		StringBuilder res = new StringBuilder();
+		res.append(longestPathStr + "\n");
+		res.append(lengthSubPath + "\n");
+		res.append("Total lengthof the path: "+length+"m.\n");
+		return res.toString();
+	}
+	
+	
+	public void calBetweenness() {
+		global_betweenness = new HashMap<Edge, Float>();
+		for(List<Edge> SP : collectAllSP()) {
+			float sumWeight = 0;
+			for(Edge e : SP) {
+				sumWeight += edgeToWeight.get(e);
+			}
+			for(Edge e : SP) {
+				global_betweenness.put(e, global_betweenness.get(e) + sumWeight);
+			}
+		}
+	}
+	
+	public List<List<Vertex>> findClusters(Map<Vertex,Boolean> visit) {
+		List<List<Vertex>> clusters = new LinkedList<List<Vertex>>();
+		
+		//BFS test connection
+		
+		
+		//find a new cluster
+		Vertex cur_vertex = null;
+		for(Vertex v : getVertices()) {
+			if(visit.get(v) == false) {
+				cur_vertex = v;
+				break;
+			}
+		}
+		
+		//no more clusters
+		if(cur_vertex == null) {
+			return clusters;
+		}
+		
+		clusters.add(0, new LinkedList<Vertex>());
+		Queue<Vertex> queue = new LinkedList<Vertex>();
+		
+		queue.add(cur_vertex);
+		visit.put(cur_vertex, true);
+		
+		
+		while(!queue.isEmpty()) {
+			cur_vertex = queue.poll();
+			clusters.get(0).add(cur_vertex);
+			//System.out.println("poll " + cur_vertex + "\n");
+
+			for(Vertex v : getAdjacentVertices(cur_vertex)) {
+				if(visit.get(v) == false) {
+					//System.out.println("visit "+ v +"\n");
+					visit.put(v, true);
+					queue.add(v);
+				}
+			}
+		}
+		
+		for(Vertex v : getVertices()) {
+			if(visit.get(v) == false) {
+				clusters.addAll(findClusters(visit));
+			}
+		}
+		return clusters;
+	}
+	
+	public List<List<Vertex>> Graph_Clustering(int remove_num) {
+		List<List<Vertex>> clusters = new ArrayList<List<Vertex>>();
+		
+		calBetweenness();
+		
+		//sort Betweenness
+		List<Map.Entry<Edge,Float>> highestBetweenness = new ArrayList<Map.Entry<Edge,Float>>(global_betweenness.entrySet());
+		Collections.sort(highestBetweenness,new Comparator<Map.Entry<Edge,Float>>() {
+            //increase
+            public int compare(Entry<Edge,Float> o1,
+                    Entry<Edge,Float> o2) {
+                return o1.getValue().compareTo(o2.getValue());
+            }
+            
+        });
+		
+		
+		//remove edges with highest betweenness
+		for(int i = 0; i < remove_num; i++) {
+			//delete the last(highest) element in array instead of the first, optimize.
+			Edge e = highestBetweenness.get(highestBetweenness.size()-1).getKey();
+			removeEdge(e, edgeToSrc.get(e), edgeToDest.get(e));
+			highestBetweenness.remove(highestBetweenness.size()-1);
+		}
+		
+		
+		//find clusters
+		Map<Vertex,Boolean> visit = new HashMap<Vertex,Boolean>();
+		clusters = findClusters(visit);
+
+		//One clusters still, remove more edges.
+		while(clusters.size() <= 1) {
+			for(int i = 0; i < remove_num; i++) {
+				//delete the last(highest) element in array instead of the first, optimize.
+				Edge e = highestBetweenness.get(highestBetweenness.size()-1).getKey();
+				removeEdge(e, edgeToSrc.get(e), edgeToDest.get(e));
+				highestBetweenness.remove(highestBetweenness.size()-1);
+			}
+			
+			clusters = findClusters(visit);
+		}
+		return clusters;
+	}
 }
