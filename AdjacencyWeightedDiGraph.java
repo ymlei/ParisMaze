@@ -30,14 +30,14 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
 	
 	private class Node implements Comparable<Node>{
 		public final Vertex v;
-		public Vertex pathFrom;
+//		public Vertex pathFrom;
 		public Edge e;
 		public float dis;
 		
 		public Node(Vertex vertex, Vertex from, Edge edge, float distance) {
 			v = vertex;
 			e = edge;
-			pathFrom = from;
+//			pathFrom = from;
 			dis = distance;
 		}
 		
@@ -56,6 +56,10 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
 			vertices.add(v);
 			vertexToEdges.put(v, new ArrayList<Edge>());
 		}
+	}
+	
+	public void removeVertex(Vertex v) {
+		vertices.remove(v);
 	}
 	
 	public List<Vertex> getVertices(){
@@ -189,6 +193,10 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
 		Map<Vertex, Float> distance = new HashMap<Vertex, Float>();
 		Map<Vertex, Edge> adjacent = new HashMap<Vertex, Edge>();
 		Map<Vertex, Boolean> visit = new HashMap<Vertex, Boolean>();
+		for(Vertex v : getVertices()){
+			visit.put(v, false);
+		}
+		
 		
 		Queue<Node> pq = new PriorityQueue<Node>();
 		Node cur = new Node(src, src, null, 0);
@@ -198,6 +206,8 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
 		while(!pq.isEmpty()) {
 
 			cur = pq.poll();
+			//System.out.println("visit.cur is "+visit.get(cur.v));
+			//System.out.println("cur is "+cur.v);
 			
 			if(visit.get(cur.v) == true) continue;
 			
@@ -210,7 +220,6 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
 				
 				//Has been visited, next edge
 				if(visit.get(edgeToDest.get(e)) == true) continue;
-				
 				pq.add(new Node(edgeToDest.get(e), cur.v, e, cur.dis + edgeToWeight.get(e)));
 			}
 		}
@@ -223,7 +232,7 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
 			if(v.equals(src)) continue;
 			
 			LinkedList<Edge> path = new LinkedList<Edge>();
-			while(!v.equals(src)) {
+			while(v != null && !v.equals(src) && adjacent.get(v) != null) {
 				//System.out.println("track "+ cur_vertex +"\n");
 				path.add(0, adjacent.get(v));
 				v = edgeToSrc.get(adjacent.get(v));
@@ -260,6 +269,7 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
 			float curlength = 0;
 			
 			for(Edge e : path) {
+				if(e==null) continue;
 				curlength += edgeToWeight.get(e);
 			}
 			
@@ -281,7 +291,7 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
 
 		List<Edge> diameter = diameterWeighted();
 		longestPathStr.append(vertexToName.get( edgeToSrc.get(diameter.get(0))));
-		int length = 0;
+		float length = 0f;
 		for(Edge e : diameter) {
 			longestPathStr.append("=>" + vertexToName.get(edgeToDest.get(e)));
 			lengthSubPath.append(vertexToName.get(edgeToSrc.get(e)) + "-" + vertexToName.get(edgeToDest.get(e)) 
@@ -299,12 +309,16 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
 	
 	public void calBetweenness() {
 		global_betweenness = new HashMap<Edge, Float>();
+		for(Edge e : getEdges()) {
+			global_betweenness.put(e, 0f);
+		}
 		for(List<Edge> SP : collectAllSP()) {
 			float sumWeight = 0;
 			for(Edge e : SP) {
 				sumWeight += edgeToWeight.get(e);
 			}
 			for(Edge e : SP) {
+				if(e==null) continue;
 				global_betweenness.put(e, global_betweenness.get(e) + sumWeight);
 			}
 		}
@@ -312,7 +326,7 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
 	
 	public List<List<Vertex>> findClusters(Map<Vertex,Boolean> visit) {
 		List<List<Vertex>> clusters = new LinkedList<List<Vertex>>();
-		
+		//System.out.println("To find clusters");
 		//BFS test connection
 		
 		
@@ -320,6 +334,7 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
 		Vertex cur_vertex = null;
 		for(Vertex v : getVertices()) {
 			if(visit.get(v) == false) {
+				//System.out.println("Still have "+v);
 				cur_vertex = v;
 				break;
 			}
@@ -338,15 +353,18 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
 		
 		
 		while(!queue.isEmpty()) {
+			//System.out.println("Not Empty");
 			cur_vertex = queue.poll();
+			
+			
 			clusters.get(0).add(cur_vertex);
 			//System.out.println("poll " + cur_vertex + "\n");
 
 			for(Vertex v : getAdjacentVertices(cur_vertex)) {
 				if(visit.get(v) == false) {
 					//System.out.println("visit "+ v +"\n");
-					visit.put(v, true);
 					queue.add(v);
+					visit.put(v, true);
 				}
 			}
 		}
@@ -356,6 +374,7 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
 				clusters.addAll(findClusters(visit));
 			}
 		}
+		//System.out.println("a Cluster!");
 		return clusters;
 	}
 	
@@ -366,6 +385,7 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
 		
 		//sort Betweenness
 		List<Map.Entry<Edge,Float>> highestBetweenness = new ArrayList<Map.Entry<Edge,Float>>(global_betweenness.entrySet());
+		//System.out.println("Betweenness size is " + highestBetweenness.size());
 		Collections.sort(highestBetweenness,new Comparator<Map.Entry<Edge,Float>>() {
             //increase
             public int compare(Entry<Edge,Float> o1,
@@ -375,31 +395,65 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
             
         });
 		
-		
+	/*	
 		//remove edges with highest betweenness
+		System.out.println("Remove edges");
 		for(int i = 0; i < remove_num; i++) {
 			//delete the last(highest) element in array instead of the first, optimize.
 			Edge e = highestBetweenness.get(highestBetweenness.size()-1).getKey();
 			removeEdge(e, edgeToSrc.get(e), edgeToDest.get(e));
 			highestBetweenness.remove(highestBetweenness.size()-1);
 		}
-		
+	*/	
 		
 		//find clusters
 		Map<Vertex,Boolean> visit = new HashMap<Vertex,Boolean>();
+		for(Vertex v : getVertices()) {
+			visit.put(v, false);
+			if(getAdjacentVertices(v).size() == 0) removeVertex(v);
+		}
+		
+		//System.out.println("Find clusters");
 		clusters = findClusters(visit);
 
 		//One clusters still, remove more edges.
-		while(clusters.size() <= 1) {
+		while(clusters.size() <= 2) {
+			//System.out.println("Remove edges");
 			for(int i = 0; i < remove_num; i++) {
 				//delete the last(highest) element in array instead of the first, optimize.
 				Edge e = highestBetweenness.get(highestBetweenness.size()-1).getKey();
 				removeEdge(e, edgeToSrc.get(e), edgeToDest.get(e));
 				highestBetweenness.remove(highestBetweenness.size()-1);
 			}
-			
+			//System.out.println("Find clusters");
+			for(Vertex v : getVertices()) {
+				visit.put(v, false);
+				//if(getAdjacentVertices(v).size() == 0) removeVertex(v);
+			}
 			clusters = findClusters(visit);
 		}
+		//System.out.println("We have clusters");
 		return clusters;
+	}
+	
+	public List<String> VerticesToStrings(List<Vertex> path){
+		List<String> strList = new LinkedList<String>();
+		for(Vertex v : path) {
+			strList.add(getNameByVertex(v));
+		}
+		return strList;
+	}
+	
+	public String clustersToString(List<List<Vertex>> clusters) {
+		StringBuilder clusterStr = new StringBuilder();
+		clusterStr.append("There are " + clusters.size()+ " clusters.\n");
+		for(List<Vertex> curCluster : clusters) {
+			clusterStr.append("{");
+			for(String v : VerticesToStrings(curCluster)) {
+				clusterStr.append(v + ",");
+			}
+			clusterStr.append("}\n");
+		}
+		return clusterStr.toString();
 	}
 }

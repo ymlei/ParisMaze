@@ -81,7 +81,7 @@ public class AdjacencyDiGraph<Vertex, Edge> implements DiGraph<Vertex, Edge> {
 	public List<String> VerticesToStrings(List<Vertex> path){
 		List<String> strList = new LinkedList<String>();
 		for(Vertex v : path) {
-			strList.add(v.toString());
+			strList.add(getNameByVertex(v));
 		}
 		return strList;
 	}
@@ -190,13 +190,13 @@ public class AdjacencyDiGraph<Vertex, Edge> implements DiGraph<Vertex, Edge> {
 			if(v.equals(src)) continue;
 			
 			List<Vertex> onePath = new LinkedList<Vertex>();
-			
-			while(!v.equals(src)) {
-				//System.out.println("track "+ cur_vertex +"\n");
-				onePath.add(0, cur_vertex);
-				cur_vertex = visit.get(cur_vertex);
+			//System.out.println("v : "+v+" src: "+ src +"\n");
+			while(v != null && !v.equals(src)) {
+				onePath.add(0, v);
+				v = visit.get(v);
+				//System.out.println("v: "+ v +"\n");
 			}
-			onePath.add(0, cur_vertex);
+			onePath.add(0, v);
 			res.add(onePath);
 		}
 
@@ -241,17 +241,17 @@ public class AdjacencyDiGraph<Vertex, Edge> implements DiGraph<Vertex, Edge> {
 		longestPathStr.append("Longest path: ");
 		lengthSubPath.append("Lengths of sub-paths: ");
 
-		int length = 0;
+		long length = 0;
 		for(String v : VerticesToStrings(diameterUnweighted())) {
-			longestPathStr.append(v+"=>");
-			lengthSubPath.append(v+":1 step;"+v+"-");
+			longestPathStr.append(v +"=>");
+			lengthSubPath.append(v+":1 step;"+ v + vertexToName.get(v)+"-");
 			length++;
 		}
 		
 		StringBuilder res = new StringBuilder();
 		res.append(longestPathStr + "\n");
 		res.append(lengthSubPath + "\n");
-		res.append("Total lengthof the path: "+length+"m.\n");
+		res.append("Total lengthof the path: "+length+"steps.\n");
 		return res.toString();
 	}
 }
