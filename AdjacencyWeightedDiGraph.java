@@ -318,7 +318,6 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
 				sumWeight += edgeToWeight.get(e);
 			}
 			for(Edge e : SP) {
-				if(e==null) continue;
 				global_betweenness.put(e, global_betweenness.get(e) + sumWeight);
 			}
 		}
@@ -378,7 +377,8 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
 		return clusters;
 	}
 	
-	public List<List<Vertex>> Graph_Clustering(int remove_num) {
+	public List<List<Vertex>> Graph_Clustering(int remove_num, int cluster_num) {
+		//int cluster_num = 9;
 		List<List<Vertex>> clusters = new ArrayList<List<Vertex>>();
 		
 		calBetweenness();
@@ -417,11 +417,12 @@ public class AdjacencyWeightedDiGraph<Vertex, Edge>
 		clusters = findClusters(visit);
 
 		//One clusters still, remove more edges.
-		while(clusters.size() <= 2) {
+		while(clusters.size() <= cluster_num) {
 			//System.out.println("Remove edges");
 			for(int i = 0; i < remove_num; i++) {
 				//delete the last(highest) element in array instead of the first, optimize.
 				Edge e = highestBetweenness.get(highestBetweenness.size()-1).getKey();
+				System.out.println("Remove edge" + e +" " + highestBetweenness.get(highestBetweenness.size()-1).getValue());
 				removeEdge(e, edgeToSrc.get(e), edgeToDest.get(e));
 				highestBetweenness.remove(highestBetweenness.size()-1);
 			}

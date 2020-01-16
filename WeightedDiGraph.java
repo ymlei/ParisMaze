@@ -29,6 +29,6 @@ public interface WeightedDiGraph<Vertex, Edge> {
 
 	public void calBetweenness();
 	public List<List<Vertex>> findClusters(Map<Vertex,Boolean> visit);
-	public List<List<Vertex>> Graph_Clustering(int remove_num);
+	public List<List<Vertex>> Graph_Clustering(int remove_num, int cluster_num)
 	public String clustersToString(List<List<Vertex>> clusters);
 }

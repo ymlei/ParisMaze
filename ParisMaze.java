@@ -76,7 +76,7 @@ public class ParisMaze {
 		System.out.println("Weighted Graph:");
 		WeightedDiGraph<Long, Long> parismaze1 = readWeightedDiGraph();
 		System.out.println(parismaze1.diameterToString());
-		System.out.println(parismaze1.clustersToString(parismaze1.Graph_Clustering(5)));
+		System.out.println(parismaze1.clustersToString(parismaze1.Graph_Clustering(10, 9)));
 		
 	}
 
